@@ -113,7 +113,7 @@ def load_ecoli(dataset_dir, size,index):
     # load the files
     data = np.load(os.path.join(dataset_dir, f'ecoli_{size}/ecoli_{index}.npz'))
     X=data['X']
-    X=prepross_data(X)
+    X=X-X.mean()
     adj_matrix = data['adj_matrix']
     return X, adj_matrix
     
