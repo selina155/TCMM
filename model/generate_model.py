@@ -18,7 +18,7 @@ def generate_model(cfg: DictConfig):
                               data_dim=data_dim,
                               aggregated_graph=aggregated_graph)
     else:
-        multi_graph = cfg.model in ('mcd','gnn')
+        multi_graph = cfg.model in ('mcd','tcmm')
         if multi_graph:
             num_graphs = cfg.trainer.num_graphs
         if 'decoder' in cfg:
@@ -66,7 +66,7 @@ def generate_model(cfg: DictConfig):
                                   tcsf=tcsf,
                                   training_config=training_config,
                                   aggregated_graph=aggregated_graph)
-        elif cfg.model in ('mcd','gnn'):
+        elif cfg.model in ('mcd','tcmm'):
             trainer = instantiate(cfg.trainer,
                                   num_workers=num_workers,
                                   lag=lag,
