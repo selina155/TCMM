@@ -33,7 +33,6 @@ class BaseTrainer(pl.LightningModule):
         self.return_graph_indices = return_graph_indices
 
         I = np.arange(full_dataset.shape[0])
-        print("shuffle:",shuffle)
         if shuffle:
             rng = np.random.default_rng(seed=42)
             rng.shuffle(I)
@@ -42,13 +41,12 @@ class BaseTrainer(pl.LightningModule):
         self.adj_matrices_np = adj_matrices[I]
 
         self.use_all_for_val = use_all_for_val
-        self.val_frac = val_frac#验证集比例
+        self.val_frac = val_frac
         assert self.val_frac >= 0.0 and self.val_frac < 1.0, "Validation fraction should be between 0 and 1"
 
         num_samples = full_dataset.shape[0]
         self.total_samples = num_samples
         assert adj_matrices.shape[0] == num_samples
-    #0.8数据训练，剩余的0.2数据验证
         if self.use_all_for_val:
             print("Using *all* examples for validation. Ignoring val_frac...")
             self.train_dataset_np = self.full_dataset_np
@@ -64,7 +62,7 @@ class BaseTrainer(pl.LightningModule):
                 (1-self.val_frac)*num_samples)]
             self.val_adj_np = self.adj_matrices_np[int(
                 (1-self.val_frac)*num_samples):]
-        #分别对训练和验证数据分割
+
         print("full:\n", self.full_dataset_np.shape)
         print("train:\n",self.train_dataset_np.shape)
         print("test:\n", self.val_dataset_np.shape)
@@ -79,13 +77,8 @@ class BaseTrainer(pl.LightningModule):
             self.val_adj_np,
             lag=lag,
             aggregated_graph=self.aggregated_graph,
-            return_graph_indices=self.return_graph_indices)#返回图的索引
-        #self.full_frag_dataset = FragmentDataset(
-         #   self.full_dataset_np,
-          #  self.adj_matrices_np,
-           # lag=lag,
-            #aggregated_graph=self.aggregated_graph,
-            #return_graph_indices=self.return_graph_indices)
+            return_graph_indices=self.return_graph_indices)
+      
         self.num_fragments = len(self.train_frag_dataset)
         self.full_dataset = TensorDataset(
             torch.Tensor(self.full_dataset_np),
@@ -117,14 +110,14 @@ class BaseTrainer(pl.LightningModule):
         loss = self.compute_loss(X_history, x_current, X_full, adj_matrix)
         self.log("val_loss", loss)
 
-    def train_dataloader(self) -> DataLoader:#训练数据加载
+    def train_dataloader(self) -> DataLoader:
     
-        return DataLoader(self.train_frag_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)#训练数据随机打乱
-        #return DataLoader(self.full_dataset, batch_size=self.batch_size, num_workers=self.num_workers,shuffle=True)
+        return DataLoader(self.train_frag_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
+       
 
-    def val_dataloader(self) -> DataLoader:#验证数据加载
+    def val_dataloader(self) -> DataLoader:
         return DataLoader(self.val_frag_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
-        #return DataLoader(self.full_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
+        
 
     def get_full_dataloader(self) -> DataLoader:
         return DataLoader(self.full_dataset, batch_size=self.batch_size, num_workers=self.num_workers)

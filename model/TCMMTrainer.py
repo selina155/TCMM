@@ -3,15 +3,15 @@ import torch
 from sklearn.metrics import accuracy_score
 import numpy as np
 
-from src.model.BaseTrainer import BaseTrainer
-from src.utils.loss_utils import dag_penalty_notears, sparsity_temporal_graph_sparsity, temporal_graph_sparsity
+from src.model.RhinoTrainer import RhinoTrainer
+from src.utils.loss_utils import dag_penalty_notears, hierarchical_temporal_graph_sparsity
 from src.utils.data_utils.data_format_utils import to_time_aggregated_scores_torch, zero_out_diag_torch, \
     get_adj_matrix_id
 from src.modules.adjacency_matrices.MultiTemporalAdjacencyMatrix import MultiTemporalAdjacencyMatrix
 from src.modules.MixtureSelectionLogits import MixtureSelectionLogits
 
 
-class TCMMTrainer(RhinoTrainer):  
+class TCMMTrainer(RhinoTrainer):
     def __init__(self,
                  full_dataset: np.array,
                  adj_matrices: np.array,
@@ -25,26 +25,26 @@ class TCMMTrainer(RhinoTrainer):
                  # diagnostic option to check if the graph can be learnt when the correct mixture index is given
                  use_true_graph: bool = False,
                  # diagnostic option to check if the correct mixture index is learnt when the correct graph is given
-                 likelihood_loss: str = 'mse',  
+                 likelihood_loss: str = 'mse',
                  ignore_self_connections: bool = False,  # if the self-connections are ignored
-                 sparsity_factor: float = 20,  
+                 sparsity_factor: float = 20,
                  num_workers: int = 16,
                  batch_size: int = 256,
                  matrix_temperature: float = 1,
                  aggregated_graph: bool = False,  # if true, a summary graph is obtained
-                 threeway_graph_dist: bool = True, 
+                 threeway_graph_dist: bool = True,
                  skip_auglag_epochs: int = 0,
-                 training_procedure: str = 'auglag',  
+                 training_procedure: str = 'auglag',
                  training_config=None,
-                 init_logits=[0, 0],  
-                 disable_inst=False, #if true, the instantaneous causality is ignored
+                 init_logits=[0, 0],
+                 disable_inst=False,  # if true, the instantaneous causality is ignored
                  graph_selection_prior_lambda: float = 0.0,
                  use_indices=None,
                  log_num_unique_graphs=False,
                  use_all_for_val=False,
                  shuffle=True
                  ):
-        self.num_nodes=num_nodes
+        self.num_nodes = num_nodes
         self.num_graphs = num_graphs
         self.graph_selection_prior_lambda = graph_selection_prior_lambda
         self.log_num_unique_graphs = log_num_unique_graphs
@@ -74,17 +74,16 @@ class TCMMTrainer(RhinoTrainer):
 
         # initialize sample-wise logits (K,N)
         self.mixture_selection = MixtureSelectionLogits(num_graphs=self.num_graphs,
-                                                        num_samples=self.total_samples)  
+                                                        num_samples=self.total_samples)
         self.use_correct_mixture_index = use_correct_mixture_index
         self.use_true_graph = use_true_graph
         # if use correct graph is set, have the set of correct graphs ready
         if self.use_true_graph:
             self.true_graphs = torch.Tensor(np.unique(adj_matrices, axis=0))
         self.use_indices = use_indices
-        
 
     def initialize_graph(self):
-        #(num_graphs,lag+1,num_nodes,num_nodes)
+        # (num_graphs,lag+1,num_nodes,num_nodes)
         self.graphs = MultiTemporalAdjacencyMatrix(
             num_nodes=self.num_nodes,
             lag=self.lag,
@@ -103,7 +102,7 @@ class TCMMTrainer(RhinoTrainer):
 
     def compute_loss(self, X_history, x_current, idx):
         # first, get the mixture assignment probabilities for each point
-        mixture_probs = self.mixture_selection.get_probs(idx) 
+        mixture_probs = self.mixture_selection.get_probs(idx)
         # mixture_probs shape: (num_graphs, batch)
 
         if self.use_true_graph:
@@ -118,8 +117,9 @@ class TCMMTrainer(RhinoTrainer):
             G=G,
             sample_idx=idx,
             mixture_probs=mixture_probs)
-            
-        total_loss = loss_terms["likelihood"] + loss_terms["graph_prior"] + loss_terms['graph_entropy']+loss_terms['graph_selection_entropy']+loss_terms['graph_selection_prior']
+
+        total_loss = loss_terms["likelihood"] + loss_terms["graph_prior"] + loss_terms['graph_entropy'] + loss_terms[
+            'graph_selection_entropy'] + loss_terms['graph_selection_prior']
         return total_loss, loss_terms, component_wise_likelihood
 
     def compute_loss_terms(self,
@@ -134,7 +134,7 @@ class TCMMTrainer(RhinoTrainer):
 
         # sparsity term
         graph_sparsity_term = self.sparsity_factor * \
-                              sparsity_temporal_graph_sparsity(G)
+                              hierarchical_temporal_graph_sparsity(G)
         # dagness factors
         dagness_penalty = dag_penalty_notears(G[:, 0])
         graph_prior_term = graph_sparsity_term
@@ -145,26 +145,26 @@ class TCMMTrainer(RhinoTrainer):
 
         # ********* graph selection prior term ********
         # weight term
-        graph_selection_weight=0.0
+        graph_selection_weight = 0.0
         ce_loss = nn.CrossEntropyLoss()
         W = -(self.graph_selection_prior_lambda * torch.arange(self.num_graphs,
                                                                device=self.device)).float()
-        graph_selection_prior_term = graph_selection_weight*ce_loss(W.unsqueeze(1).repeat(1, batch).transpose(
+        graph_selection_prior_term = graph_selection_weight * ce_loss(W.unsqueeze(1).repeat(1, batch).transpose(
             0, 1), self.mixture_selection.get_probs(sample_idx).transpose(0, 1)) / (
                                          self.num_fragments) * self.total_samples
 
         # ********** graph selection logits entropy ***
 
-        graph_selection_entropy_term = - graph_selection_weight*
-                                           self.mixture_selection.entropy(
-                                               sample_idx) / (self.num_fragments) * self.total_samples
+        graph_selection_entropy_term = - graph_selection_weight * \
+                                       self.mixture_selection.entropy(
+                                           sample_idx) / (self.num_fragments) * self.total_samples
 
         # ************* likelihood loss ****************
         X_input = torch.cat((X_history, x_current.unsqueeze(1)), dim=1)
         x_pred = self.causal_decoder(X_input, G)  # x_pred shape:(batch,num_graphs,num_nodes,data_dim)
         if self.likelihood_loss == 'mse':
             x_current = x_current.unsqueeze(1).expand(
-                (-1, self.num_graphs, -1, -1))  
+                (-1, self.num_graphs, -1, -1))
             component_wise_likelihood = torch.sum(
                 torch.square(x_pred - x_current), dim=(2, 3))
             # weight the residual term by the mixture selection probabilities
@@ -176,7 +176,7 @@ class TCMMTrainer(RhinoTrainer):
         elif self.likelihood_loss == 'flow':
             x_current = x_current.unsqueeze(1).expand(
                 (-1, self.num_graphs, -1, -1))
-            #noise distribution
+            # noise distribution
             log_prob = self.tcsf.log_prob(X_input=(x_current - x_pred).reshape(batch * self.num_graphs, -1),
                                           X_history=X_history,
                                           embeddings=mixture_probs,
@@ -214,7 +214,7 @@ class TCMMTrainer(RhinoTrainer):
 
     def training_step(self, batch, batch_idx):
 
-        X_history, x_current, adj_matrix, idx, mixture_idx = batch  
+        X_history, x_current, adj_matrix, idx, mixture_idx = batch
 
         if self.use_correct_mixture_index:
             self.mixture_selection.manual_set_mixture_indices(idx, mixture_idx)
@@ -234,7 +234,7 @@ class TCMMTrainer(RhinoTrainer):
             self.log('num_unique_graphs', float(
                 torch.unique(graph_index).shape[0]))
         loss = self.loss_calc(
-            loss, loss_terms['dagness_penalty'] / self.num_fragments) 
+            loss, loss_terms['dagness_penalty'] / self.num_fragments)
         loss_terms['loss'] = loss
         return loss_terms
 
@@ -253,7 +253,8 @@ class TCMMTrainer(RhinoTrainer):
                 for param in self.parameters():
                     param.requires_grad_(False)
 
-                self.mixture_selection.requires_grad_(True)  # each sample needs to select a graph,so the mixture_selection are update during the validation.
+                self.mixture_selection.requires_grad_(
+                    True)  # each sample needs to select a graph,so the mixture_selection are update during the validation.
                 loss, loss_terms, _ = self.compute_loss(X_history=X_history,
                                                         x_current=x_current,
                                                         idx=idx)
@@ -265,7 +266,7 @@ class TCMMTrainer(RhinoTrainer):
                     param.requires_grad_(True)
 
     def validation_step(self, batch, batch_idx):
-        X_history, x_current, adj_matrix, idx, mixture_idx = batch  
+        X_history, x_current, adj_matrix, idx, mixture_idx = batch
 
         # use the correct offset
         if not self.use_all_for_val:
@@ -304,13 +305,6 @@ class TCMMTrainer(RhinoTrainer):
             loss_terms['mixture_idx_acc'] = mixture_idx_acc
             self.log('mixture_idx_acc', mixture_idx_acc)
 
-        #if not (self.use_true_graph or self.use_correct_mixture_index):
-            # log the cluster accuracy
-         #   true_idx = mixture_idx.detach().cpu().numpy()
-          #  graph_idx = graph_index.detach().cpu().numpy()
-           # loss_terms['cluster_acc'] = cluster_accuracy(true_idx, graph_idx)
-            #self.log('cluster_acc', loss_terms['cluster_acc'])
-
         # first select graph for each sample
         graph_index = torch.argmax(
             self.mixture_selection.get_probs(idx), dim=0)
@@ -333,7 +327,7 @@ class TCMMTrainer(RhinoTrainer):
         }
 
         parameter_list = [
-            { 
+            {
                 "params": module.parameters(),
                 "lr": self.training_config.lr_init_dict[name],
                 "name": name,
@@ -347,7 +341,6 @@ class TCMMTrainer(RhinoTrainer):
             assert module in check_modules, f"Module {module} not in module list"
 
         return torch.optim.Adam(parameter_list)
-
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
 
@@ -365,4 +358,3 @@ class TCMMTrainer(RhinoTrainer):
                 probs = zero_out_diag_torch(probs)
         G = (probs >= 0.5).long()
         return G, probs, adj_matrix
-
