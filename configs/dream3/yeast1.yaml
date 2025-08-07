@@ -18,17 +18,13 @@ hypernet:
 decoder:
   _target_: src.modules.TCMMDecoder.SpatiotemporalGAT
   embedding_dim: 64
-  #num_heads: 5
-
 
 trainer:
   _target_: src.model.TCMMTrainer.TCMMTrainer
   _partial_: true
   shuffle: false
   batch_size: 64
-  #sparsity_factor: 8
-  #sparsity_factor: 25
-  sparsity_factor: 25
+  sparsity_factor: 5
   likelihood_loss: flow
   matrix_temperature: 0.25
   threeway_graph_dist: True
@@ -37,12 +33,11 @@ trainer:
   init_logits: [-3,-3]
   use_all_for_val: false
   # multi-rhino settings
-  #num_graphs: 1
   num_graphs: 1
   use_correct_mixture_index: false
   use_true_graph: false
   log_num_unique_graphs: false
-  disable_inst: ture
+  disable_inst: true
 
 auglag_config:
   _target_: src.training.auglag.AugLagLRConfig
@@ -69,4 +64,4 @@ auglag_config:
   max_inner_steps: 6000
   force_not_converged: false
   init_rho: 1
-  init_alpha: 0 
+  init_alpha: 0
