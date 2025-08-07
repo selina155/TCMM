@@ -1,4 +1,3 @@
-
 from scipy.optimize import linear_sum_assignment
 from sklearn.metrics import confusion_matrix
 # metrics
@@ -178,5 +177,3 @@ def evaluate_results(scores,
 
 def mape_loss(X_true, x_pred):
     return torch.mean(torch.abs((X_true - x_pred) / X_true))*100
-
-

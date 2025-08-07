@@ -10,7 +10,7 @@ def temporal_graph_sparsity(G: torch.Tensor):
     """
     return torch.sum(torch.square(G))
 
-def sparsity_temporal_graph_sparsity(G: torch.Tensor):
+def hierarchical_temporal_graph_sparsity(G: torch.Tensor):
     """
     Args:
     G: (lag+1, num_nodes, num_nodes) or (batch, lag+1, num_nodes, num_nodes)
@@ -22,22 +22,11 @@ def sparsity_temporal_graph_sparsity(G: torch.Tensor):
     if G.ndimension() == 4:
         G=G.flip([1])
         num_graphs, lags, num_nodes, _ = G.shape
-        # # # # 初始化一个正则化总和
         reg_term = 0.0
-        #
-        #     #对每个时延lag (从 0 到 lag) 计算惩罚
-        # for i in range(lags):
-        #     # 计算第i时延的Frobenius范数，并乘上权重
-        #     reg_term += (i + 1) * torch.sum(torch.square(G[:, i, :, :]))
-        # return reg_term
         for i in range(lags):
-            # 计算第i时延的Frobenius范数，并乘上权重
             reg_term += torch.sum(torch.square(G[:, :(i+1), :, :]))
-            #reg_term += (i + 1) * torch.sum(torch.square(G[:, i, :, :]))
         return reg_term
-        #return sum([torch.sum(torch.norm(G[:, :(i+1), :, :],dim=(0,1))) for i in range(lags)])
 
-    # 如果不是batch模式，则只计算单一的正则化项
     elif G.ndimension() == 3:
         G=G.flip([0])
         lags, num_nodes, _ = G.shape
@@ -45,12 +34,6 @@ def sparsity_temporal_graph_sparsity(G: torch.Tensor):
         for i in range(lags):
             reg_term += torch.sum(torch.square(G[:(i+1),:,:]))
         return reg_term
-        #reg_term = torch.zeros(1)
-
-        #for i in range(lag):
-            # 计算第i时延的Frobenius范数，并乘上权重
-         #   reg_term +=  (i + 1) * torch.sum(torch.square(G[i, :, :]))
-        #return reg_term
     else:
         raise ValueError("Invalid shape for G. Expected 3 or 4 dimensions.")
 
