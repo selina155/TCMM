@@ -13,15 +13,6 @@ def get_dataset_path(dataset):
         dataset_path = 'dream3'
     elif dataset in ['traffic','medical','pm25','traffic_medical']:
         dataset_path = 'Traffic'
-    elif dataset in ['edges1','edges2','edges3','edges4']:
-        dataset_path='simdata'
-        
-    elif 'snp100' in dataset:
-        dataset_path = 'snp100'
-    elif "lorenz96" in dataset:
-        dataset_path='lorenz96'
-    elif dataset == ['finance', 'fluxnet']:
-        dataset_path = dataset
     else:
         dataset_path = 'Macaque'
 
@@ -35,30 +26,11 @@ def create_save_name(dataset, cfg):
     return dataset
 
 
-def load_synthetic_from_folder(dataset_dir, dataset_name):
-    X = np.load(os.path.join(dataset_dir, dataset_name, 'X.npy'))
-    adj_matrix = np.load(os.path.join(
-        dataset_dir, dataset_name, 'adj_matrix.npy'))
-
-    return X, adj_matrix
-
 def norm(data):
     mean = np.mean(data, axis=1, keepdims=True)
     std = np.std(data, axis=1, keepdims=True)
     normalized_data = (data - mean) / (std)
     return normalized_data
-
-def minmax(X):
-    min_val = np.min(X, axis=1, keepdims=True)  # shape (N, 1, M)
-    max_val = np.max(X, axis=1, keepdims=True)  # shape (N, 1, M)
-    X_normalized = (X - min_val) / (max_val - min_val + 1e-8)
-    return X_normalized
-    
-def zscore(X):
-    mean = np.mean(X, axis=1, keepdims=True)  # shape (N, 1, M)
-    std = np.std(X, axis=1, keepdims=True)  # shape (N, 1, M)
-    X_normalized = (X - mean) / (std + 1e-8)  # ·ÀÖ¹³ıÁã
-    return X_normalized
            
 def prepross_data(data):
     num_samples, T, num_nodes = data.shape
@@ -100,7 +72,6 @@ def load_pm25(dataset_dir, dataset_file):
     X = np.load(os.path.join(dataset_dir, f'pm25_gen_data.npy'))
     X=X[:,:,:36]
     X=X-X.mean()
-    #X=prepross_data(X)
     adj_matrix=np.load(os.path.join(dataset_dir, f'pm25_graph.npy'))
     adj_matrix=np.tile(adj_matrix, (X.shape[0], 1, 1))
     return X,adj_matrix 
@@ -112,20 +83,12 @@ def load_tm(dataset_dir, dataset_file):
     adj_matrix=np.load(os.path.join(dataset_dir, f'traffic_medical_adj.npy'))
     return X,adj_matrix
     
-def load_simdata(dataset_dir, dataset_file):
-    X = np.load(os.path.join(dataset_dir, f'edges4_data2.npy'))
-    print(X.shape)
-    adj_matrix=np.load(os.path.join(dataset_dir, f'edges4_graph2.npy'))
-    return X,adj_matrix
 
  
 def load_dream3_combined(dataset_dir, size):
     data = np.load(os.path.join(dataset_dir, f'combined_{size}.npz'))
-    #data = np.load(os.path.join(dataset_dir, f'ecoli_{size}\\ecoli_1_diff.npy'))
-    #data=np.load(os.path.join(dataset_dir, f'yeast_{size}/yeast_3.npz'))
     X=data['X']
     X=X-X.mean()
-    #X=prepross_data(X)
     adj_matrix = data['adj_matrix']
     return X, adj_matrix
 
@@ -140,29 +103,16 @@ def load_Macaque(dataset_dir, dataset_file):
 def load_yeast(dataset_dir, size,index):
     # load the files
     data = np.load(os.path.join(dataset_dir, f'yeast_{size}/yeast_{index}.npz'))
-    #data = np.load(os.path.join(dataset_dir, f'ecoli_{size}\\ecoli_1_diff.npy'))
-    #data=np.load(os.path.join(dataset_dir, f'yeast_{size}/yeast_3.npz'))
     X=data['X']
-    #X=prepross_data(X)
     X=X-X.mean()
     adj_matrix = data['adj_matrix']
     return X, adj_matrix
 
-def load_lorenz96(dataset_dir, dataset_file):
-    data = np.load(os.path.join(dataset_dir, dataset_file+'.npz'))
-    X = data['X']
-    #X = np.transpose(X, (0, 2, 1))
-    adj_matrix = data['adj_matrix']
-    #adj_matrix = data['adj_matrix']
-    return X, adj_matrix
 
 def load_ecoli(dataset_dir, size,index):
     # load the files
     data = np.load(os.path.join(dataset_dir, f'ecoli_{size}/ecoli_{index}.npz'))
-    #data = np.load(os.path.join(dataset_dir, f'ecoli_{size}\\ecoli_1_diff.npy'))
-    #data=np.load(os.path.join(dataset_dir, f'yeast_{size}/yeast_3.npz'))
     X=data['X']
-    #X=X-X.mean()
     X=prepross_data(X)
     adj_matrix = data['adj_matrix']
     return X, adj_matrix

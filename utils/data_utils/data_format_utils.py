@@ -10,20 +10,20 @@ def convert_data_to_timelagged(X, lag):
     """
     n_samples, timesteps, num_nodes, data_dim = X.shape
 
-    n_fragments_per_sample = timesteps - lag#每个样本分段
-    n_fragments = n_samples * n_fragments_per_sample#所有样本的分段数
+    n_fragments_per_sample = timesteps - lag
+    n_fragments = n_samples * n_fragments_per_sample
     X_history = np.zeros((n_fragments, lag, num_nodes, data_dim))
     X_input = np.zeros((n_fragments, num_nodes, data_dim))
     X_indices = np.zeros((n_fragments))
     for i in range(n_fragments_per_sample):
-        X_history[i*n_samples:(i+1)*n_samples] = X[:, i:i+lag, :, :]#将所有样本划分后的段按顺序排列，输入的是从t-L:t时刻的数据
-        X_input[i*n_samples:(i+1)*n_samples] = X[:, i+lag, :, :]#X_input表示的是t时刻的数据
-        X_indices[i*n_samples:(i+1)*n_samples] = np.arange(n_samples)#索引，每个段从0-n_sample计数
+        X_history[i*n_samples:(i+1)*n_samples] = X[:, i:i+lag, :, :]
+        X_input[i*n_samples:(i+1)*n_samples] = X[:, i+lag, :, :]
+        X_indices[i*n_samples:(i+1)*n_samples] = np.arange(n_samples)
     return X_history, X_input, X_indices
 
 
 def get_adj_matrix_id(A):
-    return np.unique(A, axis=(0), return_inverse=True)#返回图的索引
+    return np.unique(A, axis=(0), return_inverse=True)
 
 
 def convert_adj_to_timelagged(A, lag, n_fragments, aggregated_graph=False, return_indices=True):
@@ -46,12 +46,12 @@ def convert_adj_to_timelagged(A, lag, n_fragments, aggregated_graph=False, retur
 
     _, matrix_indices = get_adj_matrix_id(A)
 
-    for i in range(n_fragments_per_sample):#给每个样本一个统一的图
+    for i in range(n_fragments_per_sample):
         Ap[i*n_samples:(i+1)*n_samples] = A
         A_indices[i*n_samples:(i+1)*n_samples] = matrix_indices
 
     if return_indices:
-        return Ap, A_indices#返回转换后的矩阵和索引
+        return Ap, A_indices
     return Ap
 
 
@@ -75,10 +75,10 @@ def to_time_aggregated_scores_torch(graph):
     # convert edge probability matrix of shape [batch, lag+1, num_nodes, num_nodes] to aggregated
     # matrix of shape [batch, num_nodes, num_nodes]
     max_val, _ = torch.max(graph, dim=1)
-    return max_val#选择时延矩阵中概率值最大的
+    return max_val
 
 
-def zero_out_diag_np(G):#让邻接矩阵的对角线元素为0
+def zero_out_diag_np(G):
 
     if len(G.shape) == 3:
         N = G.shape[1]
