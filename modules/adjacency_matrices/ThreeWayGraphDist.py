@@ -41,9 +41,9 @@ class ThreeWayGraphDist(AdjMatrix, pl.LightningModule):
         self.lower_idxs = torch.unbind(
             torch.tril_indices(self.input_dim, self.input_dim,
                                offset=-1, device=self.device), 0
-        )#返回下三角索引（不包含对角线元素）
+        )
 
-    def _triangular_vec_to_matrix(self, vec):#vec用来填充上三角矩阵和下三角矩阵，对角线元素为0
+    def _triangular_vec_to_matrix(self, vec):
         """
         Given an array of shape (k, n(n-1)/2) where k in {2, 3}, creates a matrix of shape
         (n, n) where the lower triangular is filled from vec[0, :] and the upper
@@ -59,7 +59,7 @@ class ThreeWayGraphDist(AdjMatrix, pl.LightningModule):
         """
         Returns the adjacency matrix of edge probabilities.
         """
-        probs = F.softmax(self.logits, dim=0)  # (3, n(n-1)/2) probabilities#n(n-1)/2个元素正向、反向、无边的概率和为1
+        probs = F.softmax(self.logits, dim=0)  
         out_probs = self._triangular_vec_to_matrix(probs)
         if do_round:
             return out_probs.round()
