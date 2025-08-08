@@ -35,9 +35,6 @@ trainer:
   use_all_for_val: true
   # multi-rhino settings
   num_graphs: 1
-  use_correct_mixture_index: false
-  use_true_graph: false
-  log_num_unique_graphs: false
   disable_inst: false
 
 auglag_config:

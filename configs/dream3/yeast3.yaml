@@ -33,11 +33,7 @@ trainer:
   skip_auglag_epochs: 0
   init_logits: [-3,-3]
   use_all_for_val: true
-  # multi-rhino settings
   num_graphs: 1
-  use_correct_mixture_index: false
-  use_true_graph: false
-  log_num_unique_graphs: false
   disable_inst: true
 
 auglag_config:
