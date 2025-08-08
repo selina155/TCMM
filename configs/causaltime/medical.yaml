@@ -31,10 +31,7 @@ trainer:
   init_logits: [-5, -5, 0]
   #num_graphs: 1
   num_graphs: 3
-  use_correct_mixture_index: false
-  use_true_graph: false
   disable_inst: false
-  #log_num_unique_graphs: True
 
 auglag_config:
   _target_: src.training.auglag.AugLagLRConfig

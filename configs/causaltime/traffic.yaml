@@ -29,10 +29,7 @@ trainer:
   skip_auglag_epochs: 0
   graph_selection_prior_lambda: 0.0
   init_logits: [-5, -5, 0]
-
   num_graphs: 3
-  use_correct_mixture_index: false
-  use_true_graph: false
 
 
 auglag_config:
