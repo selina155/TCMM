@@ -25,7 +25,7 @@ trainer:
   
   batch_size: 64
 
-  sparsity_factor: 0.1
+  sparsity_factor: 0.12
   likelihood_loss: flow
   matrix_temperature: 0.25
   threeway_graph_dist: True
@@ -34,11 +34,7 @@ trainer:
   graph_selection_prior_lambda: 0.0
   init_logits: [-5,-5]
 
-  # multi-rhino settings
   num_graphs: 5
-  use_correct_mixture_index: false
-  use_true_graph: false
-  log_num_unique_graphs: false
 
 auglag_config:
   _target_: src.training.auglag.AugLagLRConfig
@@ -47,7 +43,6 @@ auglag_config:
   lr_update_lag_best: 500
   lr_init_dict:
     vardist: 0.01
-    #inter_matrix: 0.01
     functional_relationships: 0.001
     noise_dist: 0.001
     mixing_probs: 0.01
